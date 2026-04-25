@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import logging
 import re
+import ssl
 from datetime import date
+from pathlib import Path
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -15,6 +17,18 @@ _LOGGER = logging.getLogger(__name__)
 
 # Safety limits for data parsed from the third-party website
 REQUEST_TIMEOUT = aiohttp.ClientTimeout(total=30)
+
+# SSL context that completes the certificate chain using the bundled intermediate CA.
+# The council website does not serve its intermediate certificate, so we supply it here
+# to allow full chain verification rather than disabling SSL checks entirely.
+def _build_ssl_context() -> ssl.SSLContext:
+    ctx = ssl.create_default_context()
+    ctx.load_verify_locations(
+        cafile=Path(__file__).parent / "certs" / "intermediate.pem"
+    )
+    return ctx
+
+SSL_CONTEXT = _build_ssl_context()
 MAX_RESPONSE_BYTES = 1_000_000   # 1 MB — council page is typically ~50 KB
 MAX_CSRF_LENGTH = 256
 MAX_ADDRESSES = 200
@@ -165,7 +179,7 @@ class NorthumberlandBinApi:
         """Run the postcode lookup flow and return a list of address dicts."""
         try:
             async with aiohttp.ClientSession(timeout=REQUEST_TIMEOUT) as session:
-                async with session.get(f"{BASE_URL}/start", ssl=False) as resp:
+                async with session.get(f"{BASE_URL}/start", ssl=SSL_CONTEXT) as resp:
                     html = await _read_response(resp)
 
                 csrf = await hass.async_add_executor_job(_extract_csrf, html)
@@ -173,7 +187,7 @@ class NorthumberlandBinApi:
                 async with session.post(
                     f"{BASE_URL}/postcode",
                     data={"_csrf": csrf, "postcode": postcode},
-                    ssl=False,
+                    ssl=SSL_CONTEXT,
                     allow_redirects=True,
                 ) as resp:
                     html = await _read_response(resp)
@@ -197,7 +211,7 @@ class NorthumberlandBinApi:
         try:
             async with aiohttp.ClientSession(timeout=REQUEST_TIMEOUT) as session:
                 # Step 1 — get session cookie + initial CSRF
-                async with session.get(f"{BASE_URL}/start", ssl=False) as resp:
+                async with session.get(f"{BASE_URL}/start", ssl=SSL_CONTEXT) as resp:
                     html = await _read_response(resp)
                 csrf = await hass.async_add_executor_job(_extract_csrf, html)
 
@@ -205,7 +219,7 @@ class NorthumberlandBinApi:
                 async with session.post(
                     f"{BASE_URL}/postcode",
                     data={"_csrf": csrf, "postcode": postcode},
-                    ssl=False,
+                    ssl=SSL_CONTEXT,
                     allow_redirects=True,
                 ) as resp:
                     html = await _read_response(resp)
@@ -215,13 +229,13 @@ class NorthumberlandBinApi:
                 async with session.post(
                     f"{BASE_URL}/address-select",
                     data={"_csrf": csrf, "address": address_id},
-                    ssl=False,
+                    ssl=SSL_CONTEXT,
                     allow_redirects=True,
                 ) as resp:
                     resp.raise_for_status()
 
                 # Step 4 — fetch full year calendar
-                async with session.get(f"{BASE_URL}/calendarPrint", ssl=False) as resp:
+                async with session.get(f"{BASE_URL}/calendarPrint", ssl=SSL_CONTEXT) as resp:
                     html = await _read_response(resp)
 
                 events = await hass.async_add_executor_job(_parse_calendar, html)
