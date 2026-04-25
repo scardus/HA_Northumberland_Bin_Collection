@@ -2,11 +2,11 @@
   "domain": "northumberland_bin_collection",
   "name": "Northumberland Bin Collection Calendar",
   "codeowners": ["@scardus"],
+  "config_flow": true,
   "documentation": "https://github.com/scardus/HA_Northumberland_Bin_Collection",
-  "issue_tracker": "https://github.com/scardus/HA_Northumberland_Bin_Collection/issues",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "version": "1.0.0",
-  "config_flow": true,
+  "issue_tracker": "https://github.com/scardus/HA_Northumberland_Bin_Collection/issues",
   "requirements": ["beautifulsoup4>=4.12.0"]
+  "version": "1.0.0",
 }
