@@ -56,6 +56,8 @@ The schedule is refreshed automatically once a week, at a randomly chosen time t
 
 ### HACS
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=scardus&repository=HA_Northumberland_Bin_Collection&category=integration)
+
 1. Open HACS in your Home Assistant instance
 2. Click the three-dot menu (⋮) in the top right corner and select **Custom repositories**
 3. Enter the repository URL and set the category to **Integration**, then click **Add**:
