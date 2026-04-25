@@ -1,0 +1,37 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Northumberland Bin Collection",
+        "description": "Enter your postcode to find the bin collection schedule for your address.",
+        "data": {
+          "postcode": "Postcode"
+        },
+        "data_description": {
+          "postcode": "Your UK postcode, e.g. NE12 3AB"
+        }
+      },
+      "address": {
+        "title": "Select Your Address",
+        "description": "Choose your property from the list below.",
+        "data": {
+          "address": "Address"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to the Northumberland bin collection service. Please check your network and try again.",
+      "invalid_postcode": "No addresses were found for this postcode. Please check it and try again.",
+      "unknown": "An unexpected error occurred. Please try again."
+    },
+    "abort": {
+      "already_configured": "This address is already configured."
+    }
+  },
+  "issues": {
+    "update_failed": {
+      "title": "Bin collection data could not be updated",
+      "description": "The Northumberland bin collection website could not be reached or its content could not be parsed. The calendar will continue to show previously fetched data until the next successful update.\n\nError: {error}"
+    }
+  }
+}

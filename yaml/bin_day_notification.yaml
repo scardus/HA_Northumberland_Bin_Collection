@@ -1,0 +1,47 @@
+###
+# This is an example automation that triggers at 7pm, 8pm and 9pm the night before & at 7:30am of a bin collection day.
+# It checks a Frigate classification state to see if it can "see" a bin.
+# If the state is "No Bin", it sends a notification to a mobile & sets a boolean helper called "looking_for_bin" to true
+#
+# The helper is then used in another automation that recognised when a bin has been found AND this helper is true, to send another notification saying "found it!"
+###
+
+alias: Bin day notification
+description: ""
+triggers:
+  - trigger: calendar
+    event: start
+    entity_id: calendar.bin_collection_your_address
+    offset: "-05:00:00"
+  - trigger: calendar
+    event: start
+    entity_id: calendar.bin_collection_your_address
+    offset: "-04:00:00"
+  - trigger: calendar
+    event: start
+    entity_id: calendar.bin_collection_your_address
+    offset: "-03:00:00"
+  - trigger: calendar
+    event: start
+    entity_id: calendar.bin_collection_your_address
+    offset: "07:30:00"
+conditions:
+  - condition: state
+    entity_id: sensor.doorbell_camera_bin_day_classification
+    state:
+      - No Bin
+actions:
+  - action: input_boolean.turn_on
+    metadata: {}
+    target:
+      entity_id: input_boolean.looking_for_bin
+    data: {}
+  - action: notify.mobile_app_your_phone_here
+    metadata: {}
+    data:
+      title: Bin Day
+      message: >
+        {{ trigger.calendar_event.summary }} is collected
+        {% if now().hour < 12 %}today{% else %}tomorrow{% endif %}.
+        I can't see the bin. Is it out?
+mode: single
