@@ -251,6 +251,9 @@ Check Home Assistant logs (Settings → System → Logs) and filter for `northum
 **Integration fails to connect**
 If you see connection errors, check that your Home Assistant instance has general internet access.
 
+**Calendar only shows a few weeks of collections**
+The council website includes bot-detection JavaScript that limits how much data is returned to automated clients that make repeated requests in a short period. If you have been reloading the integration frequently (for example, while debugging), the server may temporarily respond with only the next few upcoming collections instead of the full year. The warning `bot-detection script is active` will appear in your logs when this happens. Wait for the next automatic weekly refresh, which will usually restore the full schedule. Under normal weekly operation this should not occur.
+
 **Schedule is out of date**
 The schedule refreshes once a week at a randomly chosen time. To force an immediate refresh, go to **Settings → Integrations**, find the integration, and select **Reload**.
 

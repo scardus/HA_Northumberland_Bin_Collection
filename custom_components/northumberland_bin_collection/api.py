@@ -253,9 +253,20 @@ class NorthumberlandBinApi:
                     ssl=SSL_CONTEXT,
                     allow_redirects=True,
                 ) as resp:
-                    await _read_response(resp)
+                    results_html = await _read_response(resp)
                     results_url = str(resp.url)
                     _LOGGER.debug("Results page URL after address-select: %s", results_url)
+
+                if "x-bni-ja" in results_html:
+                    _LOGGER.warning(
+                        "The council website's bot-detection script is active — "
+                        "the calendar may only show a limited number of upcoming "
+                        "collections rather than the full year. "
+                        "This is typically triggered by frequent requests; "
+                        "if you have been reloading the integration repeatedly, "
+                        "wait a while and the full schedule should return on the "
+                        "next weekly refresh."
+                    )
 
                 # Step 4 — fetch full year calendar; send Referer so the server
                 # treats this as navigation from the results page.
@@ -265,7 +276,12 @@ class NorthumberlandBinApi:
                     headers={"Referer": results_url},
                 ) as resp:
                     html = await _read_response(resp)
+                    _LOGGER.debug("calendarPrint final URL: %s", str(resp.url))
 
+                _LOGGER.debug(
+                    "calendarPrint response: length=%d, first 1000 chars=%.1000s",
+                    len(html), html,
+                )
                 events = await hass.async_add_executor_job(_parse_calendar, html)
                 _LOGGER.debug("Parsed %d calendar events from %d-byte response", len(events), len(html))
 
