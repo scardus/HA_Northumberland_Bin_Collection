@@ -34,6 +34,19 @@ MAX_CSRF_LENGTH = 256
 MAX_ADDRESSES = 200
 MAX_EVENTS = 500
 
+# Mimic a real browser so the council server serves the same full-year calendar
+# it serves to browsers rather than a truncated "upcoming events" response.
+SESSION_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0"
+    ),
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+        "image/avif,image/webp,*/*;q=0.8"
+    ),
+    "Accept-Language": "en-GB,en;q=0.5",
+}
+
 MONTH_NAMES = {
     "january": 1, "february": 2, "march": 3, "april": 4,
     "may": 5, "june": 6, "july": 7, "august": 8,
@@ -123,6 +136,7 @@ def _parse_calendar(html: str) -> list[dict]:
 
     # Use govuk-table class; fall back to all tables if none found
     tables = soup.find_all("table", class_="govuk-table") or soup.find_all("table")
+    _LOGGER.debug("_parse_calendar: HTML length=%d, tables found=%d", len(html), len(tables))
 
     for table in tables:
         # Check for a preceding heading that contains a year (e.g. "April 2026")
@@ -178,7 +192,9 @@ class NorthumberlandBinApi:
     async def get_addresses(self, hass: HomeAssistant, postcode: str) -> list[dict]:
         """Run the postcode lookup flow and return a list of address dicts."""
         try:
-            async with aiohttp.ClientSession(timeout=REQUEST_TIMEOUT) as session:
+            async with aiohttp.ClientSession(
+                timeout=REQUEST_TIMEOUT, headers=SESSION_HEADERS
+            ) as session:
                 async with session.get(f"{BASE_URL}/start", ssl=SSL_CONTEXT) as resp:
                     html = await _read_response(resp)
 
@@ -209,7 +225,9 @@ class NorthumberlandBinApi:
     ) -> list[dict]:
         """Run the full session flow and return all collection events for the year."""
         try:
-            async with aiohttp.ClientSession(timeout=REQUEST_TIMEOUT) as session:
+            async with aiohttp.ClientSession(
+                timeout=REQUEST_TIMEOUT, headers=SESSION_HEADERS
+            ) as session:
                 # Step 1 — get session cookie + initial CSRF
                 async with session.get(f"{BASE_URL}/start", ssl=SSL_CONTEXT) as resp:
                     html = await _read_response(resp)
@@ -225,20 +243,31 @@ class NorthumberlandBinApi:
                     html = await _read_response(resp)
                 csrf = await hass.async_add_executor_job(_extract_csrf, html)
 
-                # Step 3 — submit address ID, session is now scoped to this address
+                # Step 3 — submit address ID, follow redirect to results page;
+                # read the body so the connection is fully consumed and any
+                # server-side session state triggered by viewing the results page
+                # is recorded before we request the print calendar.
                 async with session.post(
                     f"{BASE_URL}/address-select",
                     data={"_csrf": csrf, "address": address_id},
                     ssl=SSL_CONTEXT,
                     allow_redirects=True,
                 ) as resp:
-                    resp.raise_for_status()
+                    await _read_response(resp)
+                    results_url = str(resp.url)
+                    _LOGGER.debug("Results page URL after address-select: %s", results_url)
 
-                # Step 4 — fetch full year calendar
-                async with session.get(f"{BASE_URL}/calendarPrint", ssl=SSL_CONTEXT) as resp:
+                # Step 4 — fetch full year calendar; send Referer so the server
+                # treats this as navigation from the results page.
+                async with session.get(
+                    f"{BASE_URL}/calendarPrint",
+                    ssl=SSL_CONTEXT,
+                    headers={"Referer": results_url},
+                ) as resp:
                     html = await _read_response(resp)
 
                 events = await hass.async_add_executor_job(_parse_calendar, html)
+                _LOGGER.debug("Parsed %d calendar events from %d-byte response", len(events), len(html))
 
                 if not events:
                     _LOGGER.warning(
