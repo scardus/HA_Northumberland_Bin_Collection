@@ -123,16 +123,24 @@ Uses a calendar trigger with an offset so it fires at 8 pm the evening before ea
 ```yaml
 automation:
   - alias: "Bin collection eve reminder"
-    trigger:
-      - platform: calendar
-        event: start
-        entity_id: calendar.bin_collection_your_address
-        offset: "-4:00:00"
-    action:
-      - service: notify.mobile_app_your_phone
+    triggers:
+      - trigger: calendar.event_started
+        target:
+          entity_id: calendar.bin_collection_your_address
+        options:
+          offset:
+            hours: 4
+            minutes: 0
+            seconds: 0
+            days: 0
+          offset_type: before
+    actions:
+      - action: notify.mobile_app_your_phone
         data:
           title: "Bin collection tomorrow"
-          message: "Put the {{ trigger.calendar_event.summary | lower }} bin out tonight."
+          message: >
+            Put the {{ state_attr('calendar.bin_collection_your_address', 'message') | lower }}
+            bin out tonight.
 ```
 
 ---
@@ -168,16 +176,23 @@ Uses a condition on `trigger.calendar_event.summary` to act only when the recycl
 ```yaml
 automation:
   - alias: "Recycling collection reminder"
-    trigger:
-      - platform: calendar
-        event: start
-        entity_id: calendar.bin_collection_your_address
-        offset: "-4:00:00"
-    condition:
+    triggers:
+      - trigger: calendar.event_started
+        target:
+          entity_id: calendar.bin_collection_your_address
+        options:
+          offset:
+            hours: 4
+            minutes: 0
+            seconds: 0
+            days: 0
+          offset_type: before
+    conditions:
       - condition: template
-        value_template: "{{ trigger.calendar_event.summary == 'Recycling' }}"
-    action:
-      - service: notify.mobile_app_your_phone
+        value_template: >
+          {{ state_attr('calendar.bin_collection_your_address', 'message') == 'Recycling' }}
+    actions:
+      - action: notify.mobile_app_your_phone
         data:
           title: "Recycling tomorrow"
           message: "Don't forget to put the recycling bin out tonight!"
