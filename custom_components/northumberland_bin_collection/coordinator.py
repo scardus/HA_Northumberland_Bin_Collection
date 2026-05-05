@@ -27,7 +27,6 @@ MAX_JITTER_SECONDS = 86_400  # up to 24 hours of random spread
 class NorthumberlandCoordinator(DataUpdateCoordinator[list[dict]]):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         super().__init__(hass, _LOGGER, name=DOMAIN)
-        self._postcode: str = entry.data["postcode"]
         self._address_id: str = entry.data["address_id"]
         self._api = NorthumberlandBinApi()
         self._unsub_scheduled: Callable[[], None] | None = None
@@ -57,7 +56,7 @@ class NorthumberlandCoordinator(DataUpdateCoordinator[list[dict]]):
     async def _async_update_data(self) -> list[dict]:
         try:
             result = await self._api.get_calendar_events(
-                self.hass, self._postcode, self._address_id
+                self.hass, self._address_id
             )
             async_delete_issue(self.hass, DOMAIN, "update_failed")
             return result

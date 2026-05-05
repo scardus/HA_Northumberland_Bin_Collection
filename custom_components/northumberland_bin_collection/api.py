@@ -221,29 +221,27 @@ class NorthumberlandBinApi:
             raise CannotConnect(str(err)) from err
 
     async def get_calendar_events(
-        self, hass: HomeAssistant, postcode: str, address_id: str
+        self, hass: HomeAssistant, address_id: str
     ) -> list[dict]:
-        """Run the full session flow and return all collection events for the year."""
+        """Fetch all collection events for the year using a 3-step session flow.
+
+        The /address-select page issues a CSRF token without requiring a prior
+        postcode submission, so the /start and /postcode steps are unnecessary
+        for the periodic refresh (confirmed by live testing 2025-05-05).
+        """
         try:
             async with aiohttp.ClientSession(
                 timeout=REQUEST_TIMEOUT, headers=SESSION_HEADERS
             ) as session:
-                # Step 1 — get session cookie + initial CSRF
-                async with session.get(f"{BASE_URL}/start", ssl=SSL_CONTEXT) as resp:
-                    html = await _read_response(resp)
-                csrf = await hass.async_add_executor_job(_extract_csrf, html)
-
-                # Step 2 — submit postcode, follow redirect to address-select
-                async with session.post(
-                    f"{BASE_URL}/postcode",
-                    data={"_csrf": csrf, "postcode": postcode},
-                    ssl=SSL_CONTEXT,
-                    allow_redirects=True,
+                # Step 1 — GET /address-select: establishes session + CSRF token.
+                # No /start or /postcode step required.
+                async with session.get(
+                    f"{BASE_URL}/address-select", ssl=SSL_CONTEXT
                 ) as resp:
                     html = await _read_response(resp)
                 csrf = await hass.async_add_executor_job(_extract_csrf, html)
 
-                # Step 3 — submit address ID, follow redirect to results page;
+                # Step 2 — submit address ID, follow redirect to results page;
                 # read the body so the connection is fully consumed and any
                 # server-side session state triggered by viewing the results page
                 # is recorded before we request the print calendar.
@@ -268,7 +266,7 @@ class NorthumberlandBinApi:
                         "next weekly refresh."
                     )
 
-                # Step 4 — fetch full year calendar; send Referer so the server
+                # Step 3 — fetch full year calendar; send Referer so the server
                 # treats this as navigation from the results page.
                 async with session.get(
                     f"{BASE_URL}/calendarPrint",
