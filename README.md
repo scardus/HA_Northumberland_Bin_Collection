@@ -124,16 +124,10 @@ Uses a calendar trigger with an offset so it fires at 8 pm the evening before ea
 automation:
   - alias: "Bin collection eve reminder"
     triggers:
-      - trigger: calendar.event_started
-        target:
-          entity_id: calendar.bin_collection_your_address
-        options:
-          offset:
-            hours: 4
-            minutes: 0
-            seconds: 0
-            days: 0
-          offset_type: before
+      - trigger: calendar
+        event: start
+        entity_id: calendar.bin_collection_your_address
+        offset: "-04:00:00"
     actions:
       - action: notify.mobile_app_your_phone
         data:
@@ -177,16 +171,10 @@ Uses a condition on `trigger.calendar_event.summary` to act only when the recycl
 automation:
   - alias: "Recycling collection reminder"
     triggers:
-      - trigger: calendar.event_started
-        target:
-          entity_id: calendar.bin_collection_your_address
-        options:
-          offset:
-            hours: 4
-            minutes: 0
-            seconds: 0
-            days: 0
-          offset_type: before
+      - trigger: calendar
+        event: start
+        entity_id: calendar.bin_collection_your_address
+        offset: "-04:00:00"
     conditions:
       - condition: template
         value_template: >

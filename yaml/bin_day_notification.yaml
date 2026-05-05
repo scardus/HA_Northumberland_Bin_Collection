@@ -19,36 +19,22 @@
 alias: Bin day notification
 description: ""
 triggers:
-  - trigger: calendar.event_started
-    target:
-      entity_id: calendar.bin_collection_your_address
-    options:
-      offset:
-        hours: 5
-        minutes: 0
-        seconds: 0
-        days: 0
-      offset_type: before
-  - trigger: calendar.event_started
-    target:
-      entity_id: calendar.bin_collection_your_address
-    options:
-      offset:
-        hours: 4
-        minutes: 0
-        seconds: 0
-        days: 0
-      offset_type: before
-  - trigger: calendar.event_started
-    target:
-      entity_id: calendar.bin_collection_your_address
-    options:
-      offset:
-        hours: 7
-        minutes: 30
-        seconds: 0
-        days: 0
-      offset_type: after
+  - trigger: calendar
+    event: start
+    entity_id: calendar.bin_collection_your_address
+    offset: "-05:00:00"
+  - trigger: calendar
+    event: start
+    entity_id: calendar.bin_collection_your_address
+    offset: "-04:00:00"
+  - trigger: calendar
+    event: start
+    entity_id: calendar.bin_collection_your_address
+    offset: "-03:00:00"
+  - trigger: calendar
+    event: start
+    entity_id: calendar.bin_collection_your_address
+    offset: "07:30:00"
 conditions:
   - condition: state
     entity_id: sensor.doorbell_camera_bin_day_classification

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime, timedelta
 
-from homeassistant.components.calendar import CalendarEntity, CalendarEvent
+from homeassistant.components.calendar import CalendarEntity, CalendarEntityFeature, CalendarEvent
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -27,6 +27,7 @@ async def async_setup_entry(
 
 class NorthumberlandBinCalendar(CoordinatorEntity[NorthumberlandCoordinator], CalendarEntity):
     _attr_has_entity_name = True
+    _attr_supported_features = CalendarEntityFeature(0)
 
     def __init__(
         self,
@@ -75,7 +76,7 @@ class NorthumberlandBinCalendar(CoordinatorEntity[NorthumberlandCoordinator], Ca
         return [
             _make_event(e)
             for e in self.coordinator.data
-            if e["date"] >= start_d and e["date"] < end_d
+            if e["date"] >= start_d and e["date"] <= end_d
         ]
 
 
@@ -85,4 +86,5 @@ def _make_event(e: dict) -> CalendarEvent:
         summary=e["summary"],
         start=event_date,
         end=event_date + timedelta(days=1),
+        uid=f"nbc_{event_date.isoformat()}_{e['summary'].lower().replace(' ', '_')}",
     )
