@@ -84,6 +84,22 @@ def _extract_csrf(html: str) -> str:
     return value
 
 
+def _extract_bot_cookie(html: str) -> tuple[str, int, int] | None:
+    """Compute the x-bni-ja bot-detection cookie value from the page's inline script.
+
+    Returns (cookie_value_str, fixed_number, variable_number) or None if the
+    script is not found. Captures both integers for debug logging so changes to
+    either number are immediately visible.
+    """
+    raw_script = re.search(r"<script[^>]*>(var _0xcaad=.*?)</script>", html, re.DOTALL)
+    _LOGGER.debug("Bot-detection script: %s", raw_script.group(1).strip() if raw_script else "NOT FOUND")
+    m = re.search(r"_0x\w+=(-?\d+);var _0x\w+=(-?\d+)", html)
+    if not m:
+        return None
+    fixed, variable = int(m.group(1)), int(m.group(2))
+    return str(fixed + variable), fixed, variable
+
+
 def _parse_addresses(html: str) -> list[dict]:
     soup = BeautifulSoup(html, "html.parser")
     select = soup.find("select", {"name": "address"})
@@ -234,12 +250,25 @@ class NorthumberlandBinApi:
                 timeout=REQUEST_TIMEOUT, headers=SESSION_HEADERS
             ) as session:
                 # Step 1 — GET /address-select: establishes session + CSRF token.
-                # No /start or /postcode step required.
+                # Also extract and set the bot-detection cookie so subsequent
+                # requests are treated as originating from a real browser.
                 async with session.get(
                     f"{BASE_URL}/address-select", ssl=SSL_CONTEXT
                 ) as resp:
                     html = await _read_response(resp)
                 csrf = await hass.async_add_executor_job(_extract_csrf, html)
+
+                result = await hass.async_add_executor_job(_extract_bot_cookie, html)
+                if result is not None:
+                    bot_cookie, fixed, variable = result
+                    session.cookie_jar.update_cookies({"x-bni-ja": bot_cookie})
+                    _LOGGER.debug(
+                        "Step 1 bot cookie: fixed=%d, variable=%d, cookie=%s",
+                        fixed, variable, bot_cookie,
+                    )
+                else:
+                    bot_cookie = None
+                    _LOGGER.debug("Step 1: bot-detection script not found")
 
                 # Step 2 — submit address ID, follow redirect to results page;
                 # read the body so the connection is fully consumed and any
@@ -255,15 +284,23 @@ class NorthumberlandBinApi:
                     results_url = str(resp.url)
                     _LOGGER.debug("Results page URL after address-select: %s", results_url)
 
-                if "x-bni-ja" in results_html:
+                # Update the bot-detection cookie from the results page — each page
+                # embeds a new variable number, and the server validates against the
+                # most recently served value, so we must refresh before step 3.
+                result = await hass.async_add_executor_job(_extract_bot_cookie, results_html)
+                if result is not None:
+                    bot_cookie, fixed, variable = result
+                    session.cookie_jar.update_cookies({"x-bni-ja": bot_cookie})
+                    _LOGGER.debug(
+                        "Step 2 bot cookie: fixed=%d, variable=%d, cookie=%s",
+                        fixed, variable, bot_cookie,
+                    )
+                else:
+                    bot_cookie = None
                     _LOGGER.warning(
-                        "The council website's bot-detection script is active — "
-                        "the calendar may only show a limited number of upcoming "
-                        "collections rather than the full year. "
-                        "This is typically triggered by frequent requests; "
-                        "if you have been reloading the integration repeatedly, "
-                        "wait a while and the full schedule should return on the "
-                        "next weekly refresh."
+                        "Bot-detection cookie could not be computed — the calendar "
+                        "may return only a limited number of upcoming collections. "
+                        "The site's script obfuscation may have changed."
                     )
 
                 # Step 3 — fetch full year calendar; send Referer so the server
