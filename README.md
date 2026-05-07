@@ -133,7 +133,7 @@ automation:
         data:
           title: "Bin collection tomorrow"
           message: >
-            Put the {{ state_attr('calendar.bin_collection_your_address', 'message') | lower }}
+            Put the {{ trigger.calendar_event.summary | lower }}
             bin out tonight.
 ```
 
@@ -178,7 +178,7 @@ automation:
     conditions:
       - condition: template
         value_template: >
-          {{ state_attr('calendar.bin_collection_your_address', 'message') == 'Recycling' }}
+          {{ trigger.calendar_event.summary == 'Recycling' }}
     actions:
       - action: notify.mobile_app_your_phone
         data:
