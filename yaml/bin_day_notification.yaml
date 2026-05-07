@@ -75,7 +75,14 @@ actions:
     data:
       title: Bin Collection!
       message: >
-        The {{ state_attr('calendar.bin_collection_your_address', 'message') | lower }}
-        is collected {% if now().hour < 12 %}today{% else %}tomorrow{% endif %}.
+        {% set bin_type = trigger.calendar_event.summary if trigger.calendar_event is defined
+           else state_attr('calendar.bin_collection_your_address', 'message') %}
+        {% if trigger.calendar_event is defined %}
+          {% set days_until = ((trigger.calendar_event.start | as_datetime | as_local).date() - now().date()).days %}
+          {% set when = 'today' if days_until == 0 else 'tomorrow' %}
+        {% else %}
+          {% set when = 'today' if now().hour < 12 else 'tomorrow' %}
+        {% endif %}
+        The {{ bin_type | lower }} bin is collected {{ when }}.
         I can't see the bin. Is it out?
 mode: parallel
