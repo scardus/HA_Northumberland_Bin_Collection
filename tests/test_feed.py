@@ -17,6 +17,7 @@ from homeassistant.helpers import device_registry as dr
 
 from custom_components.northumberland_bin_collection.const import (
     CONF_ICS_FEED,
+    CONF_NEW_FEED_ADDRESS,
     CONF_WEBHOOK_ID,
     DOMAIN,
 )
@@ -75,7 +76,10 @@ async def test_feed_off_by_default(
 
     result = await hass.config_entries.options.async_init(init_integration.entry_id)
     assert result["type"] is FlowResultType.FORM
-    assert result["data_schema"]({}) == {CONF_ICS_FEED: False}
+    assert result["data_schema"]({}) == {
+        CONF_ICS_FEED: False,
+        CONF_NEW_FEED_ADDRESS: False,
+    }
 
     # The form already shows the address the feed would use, but nothing is served
     feed_url = result["description_placeholders"]["feed_url"]
@@ -115,7 +119,10 @@ async def test_turn_feed_on(
     assert response.status == HTTPStatus.METHOD_NOT_ALLOWED
 
     result = await hass.config_entries.options.async_init(init_integration.entry_id)
-    assert result["data_schema"]({}) == {CONF_ICS_FEED: True}
+    assert result["data_schema"]({}) == {
+        CONF_ICS_FEED: True,
+        CONF_NEW_FEED_ADDRESS: False,
+    }
     assert result["description_placeholders"]["feed_url"] == f"{EXTERNAL_URL}{path}"
 
 
@@ -138,6 +145,35 @@ async def test_turn_feed_off_and_on_again(
     client = await hass_client_no_auth()
     response = await client.get(path)
     assert response.content_type == "text/calendar"
+
+
+async def test_new_feed_address(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    hass_client_no_auth: ClientSessionGenerator,
+) -> None:
+    """A new feed address replaces the old one, which stops working."""
+    await _set_feed(hass, init_integration, True)
+    old_path = _feed_path(init_integration)
+
+    result = await hass.config_entries.options.async_init(init_integration.entry_id)
+    await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_ICS_FEED: True, CONF_NEW_FEED_ADDRESS: True}
+    )
+    await hass.async_block_till_done()
+    new_path = _feed_path(init_integration)
+    assert new_path != old_path
+    assert CONF_NEW_FEED_ADDRESS not in init_integration.options
+    assert _configuration_url(hass, init_integration) == f"{EXTERNAL_URL}{new_path}"
+
+    await _assert_not_served(hass_client_no_auth, old_path)
+    client = await hass_client_no_auth()
+    response = await client.get(new_path)
+    assert response.content_type == "text/calendar"
+
+    # The box is a one-off action, so it starts unticked next time
+    result = await hass.config_entries.options.async_init(init_integration.entry_id)
+    assert result["data_schema"]({})[CONF_NEW_FEED_ADDRESS] is False
 
 
 async def test_unload_stops_feed(

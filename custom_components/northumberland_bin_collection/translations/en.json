@@ -34,7 +34,11 @@
         "title": "Calendar feed",
         "description": "You can publish this address's collection dates as an iCal feed. Google Calendar, Outlook and Apple Calendar can then subscribe to it.\n\niCal Feed Address:\n{feed_url}\n\nAnyone with this address can see your collection dates. Other calendar apps can only use it if Home Assistant can be reached from the internet.",
         "data": {
-          "ics_feed": "Publish an iCal feed"
+          "ics_feed": "Publish an iCal feed",
+          "new_feed_address": "Generate a new feed address"
+        },
+        "data_description": {
+          "new_feed_address": "Use this if the address has reached someone who shouldn't have it."
         }
       }
     }

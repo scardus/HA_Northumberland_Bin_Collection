@@ -16,7 +16,7 @@ from homeassistant.helpers.selector import (
 )
 
 from .api import CannotConnect, NoAddressesFound, NorthumberlandBinApi
-from .const import CONF_ICS_FEED, CONF_WEBHOOK_ID, DOMAIN
+from .const import CONF_ICS_FEED, CONF_NEW_FEED_ADDRESS, CONF_WEBHOOK_ID, DOMAIN
 from .ics import async_feed_url
 
 _LOGGER = logging.getLogger(__name__)
@@ -116,11 +116,16 @@ class NorthumberlandBinOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         if user_input is not None:
+            webhook_id = (
+                webhook.async_generate_id()
+                if user_input.get(CONF_NEW_FEED_ADDRESS)
+                else self._webhook_id
+            )
             return self.async_create_entry(
                 title="",
                 data={
                     CONF_ICS_FEED: user_input[CONF_ICS_FEED],
-                    CONF_WEBHOOK_ID: self._webhook_id,
+                    CONF_WEBHOOK_ID: webhook_id,
                 },
             )
 
@@ -131,6 +136,7 @@ class NorthumberlandBinOptionsFlow(config_entries.OptionsFlow):
                     CONF_ICS_FEED,
                     default=self._entry.options.get(CONF_ICS_FEED, False),
                 ): bool,
+                vol.Optional(CONF_NEW_FEED_ADDRESS, default=False): bool,
             }),
             description_placeholders={
                 "feed_url": async_feed_url(self.hass, self._webhook_id)
