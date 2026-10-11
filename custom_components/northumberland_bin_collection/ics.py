@@ -3,10 +3,25 @@ from __future__ import annotations
 from collections.abc import Iterable
 from datetime import UTC, datetime
 
+from homeassistant.components import webhook
 from homeassistant.components.calendar import CalendarEvent
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.network import NoURLAvailableError, get_url
 
 PRODID = "-//scardus//Northumberland Bin Collection//EN"
 MAX_LINE_OCTETS = 75
+
+
+@callback
+def async_feed_url(hass: HomeAssistant, webhook_id: str) -> str | None:
+    """Return the feed's full URL, preferring one reachable from the internet."""
+    # webhook.async_generate_url() skips Home Assistant Cloud, which is often
+    # the only way in from outside
+    try:
+        base_url = get_url(hass, prefer_external=True)
+    except NoURLAvailableError:
+        return None
+    return f"{base_url}{webhook.async_generate_path(webhook_id)}"
 
 
 def render_ics(

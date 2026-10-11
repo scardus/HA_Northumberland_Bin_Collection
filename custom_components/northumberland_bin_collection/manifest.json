@@ -3,6 +3,7 @@
   "name": "Northumberland Bin Collection Calendar",
   "codeowners": ["@scardus"],
   "config_flow": true,
+  "dependencies": ["webhook"],
   "documentation": "https://github.com/scardus/HA_Northumberland_Bin_Collection",
   "integration_type": "service",
   "iot_class": "cloud_polling",

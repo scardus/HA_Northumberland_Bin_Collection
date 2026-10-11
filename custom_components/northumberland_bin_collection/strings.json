@@ -28,6 +28,17 @@
       "already_configured": "This address is already configured."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Calendar feed",
+        "description": "You can publish this address's collection dates as an iCal feed. Google Calendar, Outlook and Apple Calendar can then subscribe to it.\n\niCal Feed Address:\n{feed_url}\n\nAnyone with this address can see your collection dates. Other calendar apps can only use it if Home Assistant can be reached from the internet.",
+        "data": {
+          "ics_feed": "Publish an iCal feed"
+        }
+      }
+    }
+  },
   "issues": {
     "update_failed": {
       "title": "Bin collection data could not be updated",
