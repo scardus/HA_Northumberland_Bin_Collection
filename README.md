@@ -47,6 +47,7 @@ The schedule is refreshed automatically once a week, at a randomly chosen time t
            ├── config_flow.py
            ├── const.py
            ├── coordinator.py
+           ├── ics.py
            ├── manifest.json
            ├── strings.json
            └── translations/
@@ -80,6 +81,36 @@ The schedule is refreshed automatically once a week, at a randomly chosen time t
 The integration will immediately fetch the full year's collection schedule and create your calendar entity.
 
 > **Note:** If you have more than one property to monitor, repeat the process — each address gets its own calendar entity.
+
+---
+
+## Calendar Feed (Google Calendar, Outlook, Apple Calendar)
+
+The integration can publish each address's collections as an iCal feed. Other calendar apps can subscribe to it, so bin days appear next to the rest of your plans. The feed is off by default.
+
+### Turning it on
+
+1. Go to **Settings → Devices & services** and open **Northumberland Bin Collection**
+2. Select **Configure** on the address you want
+3. Tick **Publish an iCal feed** and press **Submit**
+4. Open **Configure** again and copy the feed address. The device page also links to it under **Visit**.
+
+### Subscribing in Google Calendar
+
+1. Open Google Calendar on a computer
+2. Next to **Other calendars**, select **+** and then **From URL**
+3. Paste the feed address and select **Add calendar**
+
+Google checks the feed every few hours, so a change can take up to a day to appear.
+
+### Things to know
+
+- Home Assistant must be reachable from the internet, because Google fetches the feed from its own servers. Home Assistant Cloud (Nabu Casa) or your own domain both work.
+- Anyone with the feed address can see your collection dates. They can't see or reach anything else in Home Assistant.
+- If the address reaches someone who shouldn't have it, tick **Generate a new feed address** in **Configure**. The old address stops working straight away, so subscribe again with the new one.
+- Untick **Publish an iCal feed** to stop the feed. If you turn it back on later, it uses the same address as before.
+- Each address has its own feed.
+- Collections are all-day events marked as free, so they don't block out your day.
 
 ---
 
@@ -260,6 +291,9 @@ This was caused by the council server using javascript bot detection code and I 
 **Schedule is out of date**
 The schedule refreshes once a week at a randomly chosen time. To force an immediate refresh, go to **Settings → Integrations**, find the integration, and select **Reload**.
 
+**Google Calendar shows no events from the feed**
+Open the feed address in a browser on your phone with Wi-Fi turned off. It should download a calendar file. If it doesn't, Home Assistant can't be reached from the internet. Also check that **Publish an iCal feed** is still ticked in **Configure**.
+
 **Update failed notification**
 If the integration cannot reach the website or parse the response, a notification will appear in **Settings → Repairs**. The calendar will continue to display previously fetched data until the next successful update. The notification clears automatically once a refresh succeeds.
 
@@ -275,6 +309,18 @@ The integration scrapes the Northumberland bin collection website using a sessio
 4. Fetches the full-year calendar page and parses the HTML table of collection dates
 
 No credentials are stored beyond your postcode and the unique address ID assigned by the council website.
+
+---
+
+## Running the Tests
+
+The tests need Linux or WSL and the Python version that the current Home Assistant release uses.
+
+```
+python -m venv .venv
+.venv/bin/pip install -r requirements_test.txt
+.venv/bin/pytest
+```
 
 ---
 
